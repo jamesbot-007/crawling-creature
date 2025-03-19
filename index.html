@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dragon Creature Following Mouse</title>
+    <title>Crawling Creature Animation</title>
     <style>
         body {
             margin: 0;
@@ -45,7 +45,11 @@
             mouseY = e.clientY;
         });
         
-        // Dragon segment class
+        // Animation timing
+        let time = 0;
+        const crawlSpeed = 0.05;
+        
+        // Creature segment class
         class Segment {
             constructor(index, total, isHead = false, isTail = false) {
                 this.index = index;
@@ -70,17 +74,18 @@
                 }
                 
                 // Leg properties
-                this.hasLegs = !isHead && !isTail && index % 5 === 0;
-                this.legLength = 30;
+                this.hasLegs = !isHead && !isTail && index % 4 === 0;
+                this.legLength = 25;
                 this.legEndSize = 3;
+                this.legPhaseOffset = index * 0.2; // Offset for leg animation
                 
                 // Horn properties (for head)
                 this.hasHorns = isHead;
-                this.hornLength = 25;
+                this.hornLength = 20;
                 this.hornAngle = Math.PI / 6; // 30 degrees
             }
             
-            update(leadX, leadY) {
+            update(leadX, leadY, currentTime) {
                 // Follow the leader (previous segment or mouse)
                 this.targetX = leadX;
                 this.targetY = leadY;
@@ -93,6 +98,9 @@
                 if (this.index > 0) {
                     this.angle = Math.atan2(this.y - leadY, this.x - leadX);
                 }
+                
+                // Store the current time for leg animation
+                this.currentTime = currentTime;
             }
             
             draw() {
@@ -126,7 +134,7 @@
                     const leftHornX = hornBaseX - Math.cos(leftHornAngle) * this.hornLength;
                     const leftHornY = hornBaseY - Math.sin(leftHornAngle) * this.hornLength;
                     
-                    ctx.lineWidth = 3;
+                    ctx.lineWidth = 2;
                     ctx.beginPath();
                     ctx.moveTo(hornBaseX, hornBaseY);
                     ctx.lineTo(leftHornX, leftHornY);
@@ -134,7 +142,7 @@
                     
                     // Horn tip
                     ctx.beginPath();
-                    ctx.arc(leftHornX, leftHornY, 4, 0, Math.PI * 2);
+                    ctx.arc(leftHornX, leftHornY, 3, 0, Math.PI * 2);
                     ctx.fill();
                     
                     // Right horn
@@ -149,7 +157,7 @@
                     
                     // Horn tip
                     ctx.beginPath();
-                    ctx.arc(rightHornX, rightHornY, 4, 0, Math.PI * 2);
+                    ctx.arc(rightHornX, rightHornY, 3, 0, Math.PI * 2);
                     ctx.fill();
                     
                     // Additional head details - small antennae
@@ -161,7 +169,7 @@
                     const smallLeftHornX = hornBaseX - Math.cos(smallLeftHornAngle) * smallHornLength;
                     const smallLeftHornY = hornBaseY - Math.sin(smallLeftHornAngle) * smallHornLength;
                     
-                    ctx.lineWidth = 2;
+                    ctx.lineWidth = 1.5;
                     ctx.beginPath();
                     ctx.moveTo(hornBaseX, hornBaseY);
                     ctx.lineTo(smallLeftHornX, smallLeftHornY);
@@ -169,7 +177,7 @@
                     
                     // Antenna tip
                     ctx.beginPath();
-                    ctx.arc(smallLeftHornX, smallLeftHornY, 3, 0, Math.PI * 2);
+                    ctx.arc(smallLeftHornX, smallLeftHornY, 2, 0, Math.PI * 2);
                     ctx.fill();
                     
                     // Small right antenna
@@ -184,23 +192,26 @@
                     
                     // Antenna tip
                     ctx.beginPath();
-                    ctx.arc(smallRightHornX, smallRightHornY, 3, 0, Math.PI * 2);
+                    ctx.arc(smallRightHornX, smallRightHornY, 2, 0, Math.PI * 2);
                     ctx.fill();
                 }
                 
-                // Draw legs/tentacles
+                // Draw legs/tentacles with crawling animation
                 if (this.hasLegs) {
+                    // Calculate leg animation phase
+                    const legPhase = this.currentTime + this.legPhaseOffset;
+                    const legSwing = Math.sin(legPhase) * 0.5; // -0.5 to 0.5
+                    
                     // Left leg
-                    const leftLegAngle = this.angle + Math.PI / 2; // 90 degrees to the left
-                    const leftLegX = this.x + Math.cos(leftLegAngle) * this.legLength;
-                    const leftLegY = this.y + Math.sin(leftLegAngle) * this.legLength;
+                    const leftLegBaseAngle = this.angle + Math.PI / 2; // 90 degrees to the left
+                    const leftLegAngle = leftLegBaseAngle + legSwing; // Add swing animation
                     
                     // Draw leg with joint in the middle
                     const leftLegMidX = this.x + Math.cos(leftLegAngle) * (this.legLength * 0.5);
                     const leftLegMidY = this.y + Math.sin(leftLegAngle) * (this.legLength * 0.5);
                     
                     // First segment of leg
-                    ctx.lineWidth = 3;
+                    ctx.lineWidth = 2;
                     ctx.beginPath();
                     ctx.moveTo(this.x, this.y);
                     ctx.lineTo(leftLegMidX, leftLegMidY);
@@ -208,13 +219,13 @@
                     
                     // Joint
                     ctx.beginPath();
-                    ctx.arc(leftLegMidX, leftLegMidY, 3, 0, Math.PI * 2);
+                    ctx.arc(leftLegMidX, leftLegMidY, 2, 0, Math.PI * 2);
                     ctx.fill();
                     
-                    // Second segment of leg (with slight angle change)
-                    const leftLegEndAngle = leftLegAngle + Math.PI / 8; // Small angle change at joint
-                    const leftLegEndX = leftLegMidX + Math.cos(leftLegEndAngle) * (this.legLength * 0.7);
-                    const leftLegEndY = leftLegMidY + Math.sin(leftLegEndAngle) * (this.legLength * 0.7);
+                    // Second segment of leg (with angle change for crawling)
+                    const leftLegEndAngle = leftLegAngle + Math.PI / 8 + legSwing * 0.5; // Add more swing to end segment
+                    const leftLegEndX = leftLegMidX + Math.cos(leftLegEndAngle) * (this.legLength * 0.6);
+                    const leftLegEndY = leftLegMidY + Math.sin(leftLegEndAngle) * (this.legLength * 0.6);
                     
                     ctx.beginPath();
                     ctx.moveTo(leftLegMidX, leftLegMidY);
@@ -226,8 +237,10 @@
                     ctx.arc(leftLegEndX, leftLegEndY, this.legEndSize, 0, Math.PI * 2);
                     ctx.fill();
                     
-                    // Right leg
-                    const rightLegAngle = this.angle - Math.PI / 2; // 90 degrees to the right
+                    // Right leg (opposite phase to left leg)
+                    const rightLegBaseAngle = this.angle - Math.PI / 2; // 90 degrees to the right
+                    const rightLegAngle = rightLegBaseAngle - legSwing; // Opposite swing
+                    
                     const rightLegMidX = this.x + Math.cos(rightLegAngle) * (this.legLength * 0.5);
                     const rightLegMidY = this.y + Math.sin(rightLegAngle) * (this.legLength * 0.5);
                     
@@ -239,13 +252,13 @@
                     
                     // Joint
                     ctx.beginPath();
-                    ctx.arc(rightLegMidX, rightLegMidY, 3, 0, Math.PI * 2);
+                    ctx.arc(rightLegMidX, rightLegMidY, 2, 0, Math.PI * 2);
                     ctx.fill();
                     
-                    // Second segment of leg (with slight angle change)
-                    const rightLegEndAngle = rightLegAngle - Math.PI / 8; // Small angle change at joint
-                    const rightLegEndX = rightLegMidX + Math.cos(rightLegEndAngle) * (this.legLength * 0.7);
-                    const rightLegEndY = rightLegMidY + Math.sin(rightLegEndAngle) * (this.legLength * 0.7);
+                    // Second segment of leg (with angle change for crawling)
+                    const rightLegEndAngle = rightLegAngle - Math.PI / 8 - legSwing * 0.5; // Opposite swing
+                    const rightLegEndX = rightLegMidX + Math.cos(rightLegEndAngle) * (this.legLength * 0.6);
+                    const rightLegEndY = rightLegMidY + Math.sin(rightLegEndAngle) * (this.legLength * 0.6);
                     
                     ctx.beginPath();
                     ctx.moveTo(rightLegMidX, rightLegMidY);
@@ -260,15 +273,15 @@
                 
                 // Draw special tail features
                 if (this.isTail && this.index % 2 === 0) {
-                    const tailFeatherAngle = Math.PI / 3; // 60 degrees
-                    const tailFeatherLength = 15 - (this.index / this.total) * 10; // Shorter towards end
+                    const tailFeatherAngle = Math.PI / 4; // 45 degrees
+                    const tailFeatherLength = 12 - (this.index / this.total) * 8; // Shorter towards end
                     
                     // Left tail feather
                     const leftFeatherAngle = this.angle + tailFeatherAngle;
                     const leftFeatherX = this.x - Math.cos(leftFeatherAngle) * tailFeatherLength;
                     const leftFeatherY = this.y - Math.sin(leftFeatherAngle) * tailFeatherLength;
                     
-                    ctx.lineWidth = 1.5;
+                    ctx.lineWidth = 1;
                     ctx.beginPath();
                     ctx.moveTo(this.x, this.y);
                     ctx.lineTo(leftFeatherX, leftFeatherY);
@@ -276,7 +289,7 @@
                     
                     // Small dot at the end
                     ctx.beginPath();
-                    ctx.arc(leftFeatherX, leftFeatherY, 1.5, 0, Math.PI * 2);
+                    ctx.arc(leftFeatherX, leftFeatherY, 1, 0, Math.PI * 2);
                     ctx.fill();
                     
                     // Right tail feather
@@ -291,7 +304,7 @@
                     
                     // Small dot at the end
                     ctx.beginPath();
-                    ctx.arc(rightFeatherX, rightFeatherY, 1.5, 0, Math.PI * 2);
+                    ctx.arc(rightFeatherX, rightFeatherY, 1, 0, Math.PI * 2);
                     ctx.fill();
                 }
                 
@@ -299,11 +312,11 @@
             }
         }
         
-        // Create dragon segments
-        const numSegments = 40; // More segments for a longer dragon
+        // Create creature segments
+        const numSegments = 40; // More segments for a longer creature
         const segments = [];
         
-        // Create head segment
+        // Create head segment (will be on the left)
         segments.push(new Segment(0, numSegments, true, false));
         
         // Create body segments
@@ -311,13 +324,37 @@
             segments.push(new Segment(i, numSegments, false, false));
         }
         
-        // Create tail segments
+        // Create tail segments (will be on the right)
         for (let i = numSegments - 10; i < numSegments; i++) {
             segments.push(new Segment(i, numSegments, false, true));
         }
         
+        // Create initial S-curve shape
+        function initializeCreature() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = Math.min(canvas.width, canvas.height) * 0.3;
+            
+            for (let i = 0; i < segments.length; i++) {
+                const angle = (i / segments.length) * Math.PI * 1.5;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                
+                segments[i].x = x;
+                segments[i].y = y;
+                segments[i].targetX = x;
+                segments[i].targetY = y;
+            }
+        }
+        
+        // Initialize creature in S-shape
+        initializeCreature();
+        
         // Animation loop
         function animate() {
+            // Update time for crawling animation
+            time += crawlSpeed;
+            
             // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
@@ -326,7 +363,7 @@
             let prevY = mouseY;
             
             segments.forEach(segment => {
-                segment.update(prevX, prevY);
+                segment.update(prevX, prevY, time);
                 const nextPos = segment.draw();
                 prevX = nextPos.x;
                 prevY = nextPos.y;
@@ -334,8 +371,8 @@
             
             // Draw a small circle at the mouse position
             ctx.beginPath();
-            ctx.arc(mouseX, mouseY, 4, 0, Math.PI * 2);
-            ctx.fillStyle = 'white';
+            ctx.arc(mouseX, mouseY, 3, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
             ctx.fill();
             
             requestAnimationFrame(animate);
