@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mouse Following Spine</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #001133;
+        }
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Set canvas size to window size
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        // Resize canvas when window is resized
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+        
+        // Mouse position with default values
+        let mouseX = canvas.width / 2;
+        let mouseY = canvas.height / 2;
+        
+        // Track mouse position
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+        
+        // Spine segment class
+        class Segment {
+            constructor(index, total) {
+                this.index = index;
+                this.total = total;
+                this.x = canvas.width / 2;
+                this.y = canvas.height / 2;
+                this.targetX = this.x;
+                this.targetY = this.y;
+                this.length = 15; // Length of segment
+                this.branchLength = this.length * 0.8;
+                this.angle = 0;
+                this.branchAngle = Math.PI / 4; // 45 degrees
+                this.followSpeed = 0.1 + (index / total) * 0.1; // Segments follow at different speeds
+            }
+            
+            update(leadX, leadY) {
+                // Follow the leader (previous segment or mouse)
+                this.targetX = leadX;
+                this.targetY = leadY;
+                
+                // Move towards target with easing
+                this.x += (this.targetX - this.x) * this.followSpeed;
+                this.y += (this.targetY - this.y) * this.followSpeed;
+                
+                // Calculate angle based on movement
+                if (this.index > 0) {
+                    this.angle = Math.atan2(this.y - leadY, this.x - leadX);
+                }
+            }
+            
+            draw() {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.lineWidth = 2;
+                
+                // Draw main segment
+                const nextX = this.x - Math.cos(this.angle) * this.length;
+                const nextY = this.y - Math.sin(this.angle) * this.length;
+                
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(nextX, nextY);
+                ctx.stroke();
+                
+                // Draw branches (only on every 3rd segment)
+                if (this.index % 3 === 0) {
+                    // Left branch
+                    const leftBranchAngle = this.angle + this.branchAngle;
+                    const leftBranchX = this.x - Math.cos(leftBranchAngle) * this.branchLength;
+                    const leftBranchY = this.y - Math.sin(leftBranchAngle) * this.branchLength;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(leftBranchX, leftBranchY);
+                    ctx.stroke();
+                    
+                    // Optional: Add a small circle at the end of the branch
+                    ctx.beginPath();
+                    ctx.arc(leftBranchX, leftBranchY, 2, 0, Math.PI * 2);
+                    ctx.fillStyle = 'white';
+                    ctx.fill();
+                    
+                    // Right branch
+                    const rightBranchAngle = this.angle - this.branchAngle;
+                    const rightBranchX = this.x - Math.cos(rightBranchAngle) * this.branchLength;
+                    const rightBranchY = this.y - Math.sin(rightBranchAngle) * this.branchLength;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(rightBranchX, rightBranchY);
+                    ctx.stroke();
+                    
+                    // Optional: Add a small circle at the end of the branch
+                    ctx.beginPath();
+                    ctx.arc(rightBranchX, rightBranchY, 2, 0, Math.PI * 2);
+                    ctx.fillStyle = 'white';
+                    ctx.fill();
+                }
+                
+                return { x: nextX, y: nextY };
+            }
+        }
+        
+        // Create spine segments
+        const numSegments = 30;
+        const segments = [];
+        
+        for (let i = 0; i < numSegments; i++) {
+            segments.push(new Segment(i, numSegments));
+        }
+        
+        // Animation loop
+        function animate() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Update and draw segments
+            let prevX = mouseX;
+            let prevY = mouseY;
+            
+            segments.forEach(segment => {
+                segment.update(prevX, prevY);
+                const nextPos = segment.draw();
+                prevX = nextPos.x;
+                prevY = nextPos.y;
+            });
+            
+            // Draw a small circle at the mouse position
+            ctx.beginPath();
+            ctx.arc(mouseX, mouseY, 4, 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Start animation
+        animate();
+    </script>
+</body>
+</html>
